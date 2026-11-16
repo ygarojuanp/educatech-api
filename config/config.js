@@ -1,5 +1,10 @@
 require('dotenv').config();
 
+const useSSL =
+  process.env.DB_SSL === 'true' ||
+  process.env.DB_SSL === '1' ||
+  (process.env.DB_HOST && process.env.DB_HOST.includes('tidbcloud'));
+
 const common = {
   username: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
@@ -9,11 +14,24 @@ const common = {
   logging: false
 };
 
+const mysqlDialectOptions = useSSL
+  ? {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false
+      }
+    }
+  : {};
+
 module.exports = {
   development: {
     ...common,
     dialect: process.env.DB_DIALECT || 'sqlite',
-    storage: process.env.DB_STORAGE || 'database.sqlite'
+    storage: process.env.DB_STORAGE || 'database.sqlite',
+    ...(process.env.DB_DIALECT === 'mysql' ||
+    (process.env.DB_HOST && process.env.DB_HOST.includes('tidbcloud'))
+      ? { dialectOptions: mysqlDialectOptions }
+      : {})
   },
   test: {
     ...common,
@@ -23,6 +41,10 @@ module.exports = {
   production: {
     ...common,
     dialect: process.env.DB_DIALECT || 'mysql',
-    storage: process.env.DB_STORAGE
+    storage: process.env.DB_STORAGE,
+    ...(process.env.DB_DIALECT === 'mysql' ||
+    (process.env.DB_HOST && process.env.DB_HOST.includes('tidbcloud'))
+      ? { dialectOptions: mysqlDialectOptions }
+      : {})
   }
 };
